@@ -1,5 +1,13 @@
 const Photo = require('../models/photo.model');
 
+function escape(test) {
+  return text.replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
 /****** SUBMIT PHOTO ********/
 
 exports.add = async (req, res) => {
@@ -8,23 +16,30 @@ exports.add = async (req, res) => {
     const { title, author, email } = req.fields;
     const file = req.files.file;
 
-    const fileName = file.path.split('/').slice(-1)[0]; // cut only filename from full path, e.g. C:/test/abc.jpg -> abc.jpg
-    const validFileExtension = /(.*?)\.(jpg|jpeg|gif|png)$/;
+    if(title && author && email && file) { // if fields are not empty...
 
-    /* Form Validation */
-    let isValid = true;
-    if (!title && !author && !email && !file) isValid = false;
-    else if (title.length >= 25 || author.length >= 50) isValid = false;
-    else if (!validFileExtension.test(fileName)) isValid = false;
+      const fileName = file.path.split('/').slice(-1)[0]; // cut only filename from full path, e.g. C:/test/abc.jpg -> abc.jpg
+      const fileExt = fileName.split('.').slice(-1)[0];
 
-    if (isValid) {
-      const newPhoto = new Photo({ title, author, email, src: fileName, votes: 0 });
-      await newPhoto.save(); // ...save new photo in DB
-      res.json(newPhoto);
+      const pattern = new RegExp(/(([A-z]|\s)*)/, 'g');
+      const matchedAuthor = author.match(pattern).join('');
+      const matchedTitle = title.match(pattern).join('');
+      const mailRegEx = new RegExp(/^[0-9a-z_.-]+@[0-9a-z.-]+\.[a-z]{2,3}$/, 'i');
+      const matchedEmail = email.match(mailRegEx).join('');
+
+      if (fileExt === 'jpg' || fileExt === 'gif' || fileExt === 'png') {
+        const newPhoto = new Photo({ title: matchedTitle, author: matchedAuthor, email: matchedEmail, src: fileName, votes: 0 });
+        await newPhoto.save(); // ...save new photo in DB
+        res.json(newPhoto);
+      } else {
+        throw new Error('Wrong input!');
+      }
+
     } else {
       throw new Error('Wrong input!');
     }
-  } catch (err) {
+
+  } catch(err) {
     res.status(500).json(err);
   }
 
@@ -36,7 +51,7 @@ exports.loadAll = async (req, res) => {
 
   try {
     res.json(await Photo.find());
-  } catch (err) {
+  } catch(err) {
     res.status(500).json(err);
   }
 
@@ -48,13 +63,13 @@ exports.vote = async (req, res) => {
 
   try {
     const photoToUpdate = await Photo.findOne({ _id: req.params.id });
-    if (!photoToUpdate) res.status(404).json({ message: 'Not found' });
+    if(!photoToUpdate) res.status(404).json({ message: 'Not found' });
     else {
       photoToUpdate.votes++;
       photoToUpdate.save();
       res.send({ message: 'OK' });
     }
-  } catch (err) {
+  } catch(err) {
     res.status(500).json(err);
   }
 
