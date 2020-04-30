@@ -10,8 +10,6 @@ function escape(test) {
     .replace(/'/g, "&#039;");
 }
 
-/****** SUBMIT PHOTO ********/
-
 exports.add = async (req, res) => {
 
   try {
@@ -47,8 +45,6 @@ exports.add = async (req, res) => {
 
 };
 
-/****** LOAD ALL PHOTOS ********/
-
 exports.loadAll = async (req, res) => {
 
   try {
@@ -59,8 +55,6 @@ exports.loadAll = async (req, res) => {
 
 };
 
-/****** VOTE FOR PHOTO ********/
-
 exports.vote = async (req, res) => {
 
   try {
@@ -68,9 +62,9 @@ exports.vote = async (req, res) => {
     const clientIp = requestIp.getClientIp(req);
     const voterExists = await Voter.findOne({ user: clientIp });
 
-    if(!photoToUpdate) res.status(404).json({ message: 'Not found' });
-
-    else if(!voterExists) {  
+    if(!photoToUpdate) {
+      res.status(404).json({ message: 'Not found' });
+    } else if(!voterExists) {  
       const newVoter = new Voter({ user: clientIp, votes: [photoToUpdate] });
       newVoter.save();
       console.log('newVoter', newVoter);
@@ -78,9 +72,8 @@ exports.vote = async (req, res) => {
       photoToUpdate.votes++;
       photoToUpdate.save();
       res.send({ message: 'OK' });
-    } 
-    
-    else if(voterExists) {
+
+    } else if(voterExists) {
       const isVoted = voterExists.votes.includes(photoToUpdate._id);
       
       if (!isVoted) {
